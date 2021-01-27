@@ -1,159 +1,208 @@
-import { mount } from '../../../test';
-import Image from '..';
+import { mount } from '@vue/test-utils';
+import VanImage from '..';
+import Lazyload from '../../lazyload';
 
-test('click event', () => {
-  const wrapper = mount(Image);
+const IMAGE_URL = 'https://img.com';
 
-  wrapper.trigger('click');
-  expect(wrapper.emitted('click')[0][0]).toBeTruthy();
-  wrapper.destroy();
-});
-
-test('load event', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+test('should emit load event after image loaded', async () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
     },
   });
 
-  wrapper.find('img').trigger('load');
+  await wrapper.find('img').trigger('load');
 
   expect(wrapper.emitted('load')[0][0]).toBeTruthy();
-  expect(wrapper).toMatchSnapshot();
-
-  wrapper.setProps({ src: '' });
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.html()).toMatchSnapshot();
 });
 
-test('error event', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+test('should watch src and reset', async () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
+    },
+  });
+
+  await wrapper.find('img').trigger('load');
+  await wrapper.setProps({ src: '' });
+  expect(wrapper.html()).toMatchSnapshot();
+});
+
+test('should emit error event when load image failed', () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
     },
   });
 
   wrapper.find('img').trigger('error');
-
   expect(wrapper.emitted('error')[0][0]).toBeTruthy();
 });
 
-test('lazy load', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+test('should render loading placeholder when using lazy-load prop', () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
       lazyLoad: true,
     },
-  });
-
-  expect(wrapper).toMatchSnapshot();
-});
-
-test('lazy-load load event', done => {
-  const wrapper = mount(Image, {
-    propsData: {
-      lazyLoad: true,
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
-    },
-    mocks: {
-      $Lazyload: {
-        $on(eventName, hanlder) {
-          if (eventName === 'loaded') {
-            setTimeout(() => {
-              hanlder({ el: null });
-              hanlder({ el: wrapper.find('img').element });
-              expect(wrapper.emitted('load').length).toEqual(1);
-              expect(wrapper).toMatchSnapshot();
-              wrapper.destroy();
-            });
-          }
-        },
-        $off() {
-          done();
-        },
-      },
-    },
-  });
-});
-
-test('lazy-load error event', done => {
-  const wrapper = mount(Image, {
-    propsData: {
-      lazyLoad: true,
-    },
-    mocks: {
-      $Lazyload: {
-        $on(eventName, hanlder) {
-          if (eventName === 'error') {
-            setTimeout(() => {
-              hanlder({ el: null });
-              hanlder({ el: wrapper.find('img').element });
-              expect(wrapper.emitted('error').length).toEqual(1);
-              expect(wrapper).toMatchSnapshot();
-              wrapper.destroy();
-            });
-          }
-        },
-        $off() {
-          done();
-        },
-      },
-    },
-  });
-});
-
-test('show-loading prop', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      showLoading: false,
+    global: {
+      plugins: [Lazyload],
     },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.html()).toMatchSnapshot();
 });
 
-test('show-error prop', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      showError: false,
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+test('should not render loading placeholder when show-loading prop is false', async () => {
+  const wrapper = mount(VanImage);
+  expect(wrapper.find('.van-image__loading').exists()).toBeTruthy();
+
+  await wrapper.setProps({
+    showLoading: false,
+  });
+  expect(wrapper.find('.van-image__loading').exists()).toBeFalsy();
+});
+
+test('should not render error placeholder when show-error prop is false', async () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
     },
   });
 
-  wrapper.find('img').trigger('error');
+  await wrapper.find('img').trigger('error');
+  expect(wrapper.find('.van-image__error').exists()).toBeTruthy();
 
-  expect(wrapper).toMatchSnapshot();
+  await wrapper.setProps({
+    showError: false,
+  });
+  expect(wrapper.find('.van-image__error').exists()).toBeFalsy();
 });
 
-test('error-icon prop', () => {
-  const wrapper = mount(Image, {
-    propsData: {
+test('should change error icon when using error-icon prop', async () => {
+  const wrapper = mount(VanImage, {
+    props: {
       errorIcon: 'error',
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+      src: IMAGE_URL,
     },
   });
 
-  wrapper.find('img').trigger('error');
-
-  expect(wrapper).toMatchSnapshot();
+  await wrapper.find('img').trigger('error');
+  expect(wrapper.find('.van-icon-error').exists()).toBeTruthy();
 });
 
-test('loading-icon prop', () => {
-  const wrapper = mount(Image, {
-    propsData: {
+test('should change loading icon when using loading-icon prop', () => {
+  const wrapper = mount(VanImage, {
+    props: {
       loadingIcon: 'success',
     },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.find('.van-icon-success').exists()).toBeTruthy();
 });
 
-test('radius prop', () => {
-  const wrapper = mount(Image, {
-    propsData: {
-      radius: 3,
-      src: 'https://img.yzcdn.cn/vant/cat.jpeg',
+test('should apply icon-prefix prop to error-icon', async () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      errorIcon: 'error',
+      iconPrefix: 'my-icon',
+      src: IMAGE_URL,
     },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  await wrapper.find('img').trigger('error');
+  expect(wrapper.find('.van-image__error-icon').html()).toMatchSnapshot();
 });
+
+test('should apply icon-prefix prop to loading-icon', () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      loadingIcon: 'success',
+      iconPrefix: 'my-icon',
+    },
+  });
+
+  expect(wrapper.find('.van-image__loading-icon').html()).toMatchSnapshot();
+});
+
+test('should change border radius when using border-radius prop', () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      radius: 3,
+    },
+  });
+
+  expect(wrapper.element.style.overflow).toEqual('hidden');
+  expect(wrapper.element.style.borderRadius).toEqual('3px');
+});
+
+test('should render default slot correctly', () => {
+  const wrapper = mount(VanImage, {
+    props: {
+      src: IMAGE_URL,
+    },
+    slots: {
+      default: () => 'Custom Default',
+    },
+  });
+
+  expect(wrapper.html()).toMatchSnapshot();
+});
+
+// TODO
+// test('should emit load event when using lazy-load prop and image loaded', (done) => {
+//   const wrapper = mount(VanImage, {
+//     props: {
+//       lazyLoad: true,
+//       src: IMAGE_URL,
+//     },
+//     global: {
+//       mocks: {
+//         $Lazyload: {
+//           $on(eventName, hanlder) {
+//             console.log('on ', eventName);
+//             if (eventName === 'loaded') {
+//               setTimeout(() => {
+//                 hanlder({ el: null });
+//                 hanlder({ el: wrapper.find('img').element });
+//                 expect(wrapper.emitted('load').length).toEqual(1);
+//                 expect(wrapper.html()).toMatchSnapshot();
+//                 wrapper.unmount();
+//               });
+//             }
+//           },
+//           $off() {
+//             done();
+//           },
+//         },
+//       },
+//     },
+//   });
+// });
+
+// test('lazy-load error event', (done) => {
+//   const wrapper = mount(VanImage, {
+//     props: {
+//       lazyLoad: true,
+//     },
+//     mocks: {
+//       $Lazyload: {
+//         $on(eventName, hanlder) {
+//           if (eventName === 'error') {
+//             setTimeout(() => {
+//               hanlder({ el: null });
+//               hanlder({ el: wrapper.find('img').element });
+//               expect(wrapper.emitted('error').length).toEqual(1);
+//               expect(wrapper.html()).toMatchSnapshot();
+//               wrapper.unmount();
+//             });
+//           }
+//         },
+//         $off() {
+//           done();
+//         },
+//       },
+//     },
+//   });
+// });

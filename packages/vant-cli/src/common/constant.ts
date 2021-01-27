@@ -3,15 +3,16 @@ import { existsSync } from 'fs-extra';
 import { join, dirname, isAbsolute } from 'path';
 
 function findRootDir(dir: string): string {
-  if (dir === '/') {
-    return '/';
-  }
-
   if (existsSync(join(dir, 'vant.config.js'))) {
     return dir;
   }
 
-  return findRootDir(dirname(dir));
+  const parentDir = dirname(dir);
+  if (dir === parentDir) {
+    return dir;
+  }
+
+  return findRootDir(parentDir);
 }
 
 // Colors
@@ -23,6 +24,7 @@ export const ROOT = findRootDir(CWD);
 export const ES_DIR = join(ROOT, 'es');
 export const LIB_DIR = join(ROOT, 'lib');
 export const DOCS_DIR = join(ROOT, 'docs');
+export const VETUR_DIR = join(ROOT, 'vetur');
 export const SITE_DIST_DIR = join(ROOT, 'site');
 export const VANT_CONFIG_FILE = join(ROOT, 'vant.config.js');
 export const PACKAGE_JSON_FILE = join(ROOT, 'package.json');

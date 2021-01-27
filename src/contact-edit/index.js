@@ -1,9 +1,12 @@
+import { watch, reactive } from 'vue';
+
 // Utils
 import { createNamespace } from '../utils';
 import { isMobile } from '../utils/validate/mobile';
 
 // Components
 import Cell from '../cell';
+import Form from '../form';
 import Field from '../field';
 import Button from '../button';
 import Dialog from '../dialog';
@@ -11,7 +14,7 @@ import Switch from '../switch';
 
 const [createComponent, bem, t] = createNamespace('contact-edit');
 
-const defaultContact = {
+const DEFAULT_CONTACT = {
   tel: '',
   name: '',
 };
@@ -25,7 +28,7 @@ export default createComponent({
     setDefaultLabel: String,
     contactInfo: {
       type: Object,
-      default: () => ({ ...defaultContact }),
+      default: () => ({ ...DEFAULT_CONTACT }),
     },
     telValidator: {
       type: Function,
@@ -33,127 +36,105 @@ export default createComponent({
     },
   },
 
-  data() {
-    return {
-      data: {
-        ...defaultContact,
-        ...this.contactInfo,
-      },
-      errorInfo: {
-        name: '',
-        tel: '',
-      },
+  emits: ['save', 'delete', 'change-default'],
+
+  setup(props, { emit }) {
+    const contact = reactive({
+      ...DEFAULT_CONTACT,
+      ...props.contactInfo,
+    });
+
+    const onSave = () => {
+      if (!props.isSaving) {
+        emit('save', contact);
+      }
     };
-  },
 
-  watch: {
-    contactInfo(val) {
-      this.data = {
-        ...defaultContact,
-        ...val,
-      };
-    },
-  },
-
-  methods: {
-    onFocus(key) {
-      this.errorInfo[key] = '';
-    },
-
-    getErrorMessageByKey(key) {
-      const value = this.data[key].trim();
-      switch (key) {
-        case 'name':
-          return value ? '' : t('nameInvalid');
-        case 'tel':
-          return this.telValidator(value) ? '' : t('telInvalid');
-      }
-    },
-
-    onSave() {
-      const isValid = ['name', 'tel'].every(item => {
-        const msg = this.getErrorMessageByKey(item);
-        if (msg) {
-          this.errorInfo[item] = msg;
-        }
-        return !msg;
-      });
-
-      if (isValid && !this.isSaving) {
-        this.$emit('save', this.data);
-      }
-    },
-
-    onDelete() {
+    const onDelete = () => {
       Dialog.confirm({
-        message: t('confirmDelete'),
+        title: t('confirmDelete'),
       }).then(() => {
-        this.$emit('delete', this.data);
+        emit('delete', contact);
       });
-    },
-  },
+    };
 
-  render() {
-    const { data, errorInfo } = this;
-    const onFocus = name => () => this.onFocus(name);
-
-    return (
-      <div class={bem()}>
-        <div class={bem('fields')}>
-          <Field
-            vModel={data.name}
-            clearable
-            maxlength="30"
-            label={t('name')}
-            placeholder={t('nameEmpty')}
-            errorMessage={errorInfo.name}
-            onFocus={onFocus('name')}
-          />
-          <Field
-            vModel={data.tel}
-            clearable
-            type="tel"
-            label={t('tel')}
-            placeholder={t('telEmpty')}
-            errorMessage={errorInfo.tel}
-            onFocus={onFocus('tel')}
-          />
-        </div>
-        {this.showSetDefault && (
-          <Cell
-            title={this.setDefaultLabel}
-            class={bem('switch-cell')}
-            border={false}
-          >
-            <Switch
-              vModel={data.isDefault}
-              size={24}
-              onChange={event => {
-                this.$emit('change-default', event);
-              }}
-            />
-          </Cell>
-        )}
-        <div class={bem('buttons')}>
+    const renderButtons = () => (
+      <div class={bem('buttons')}>
+        <Button
+          block
+          round
+          type="danger"
+          text={t('save')}
+          loading={props.isSaving}
+          nativeType="submit"
+        />
+        {props.isEdit && (
           <Button
             block
             round
-            type="danger"
-            text={t('save')}
-            loading={this.isSaving}
-            onClick={this.onSave}
+            text={t('delete')}
+            loading={props.isDeleting}
+            onClick={onDelete}
           />
-          {this.isEdit && (
-            <Button
-              block
-              round
-              text={t('delete')}
-              loading={this.isDeleting}
-              onClick={this.onDelete}
-            />
-          )}
-        </div>
+        )}
       </div>
+    );
+
+    const renderSwitch = () => (
+      <Switch
+        v-model={contact.isDefault}
+        size={24}
+        onChange={(event) => {
+          emit('change-default', event);
+        }}
+      />
+    );
+
+    const renderSetDefault = () => {
+      if (props.showSetDefault) {
+        return (
+          <Cell
+            v-slots={{ 'right-icon': renderSwitch }}
+            title={props.setDefaultLabel}
+            class={bem('switch-cell')}
+            border={false}
+          />
+        );
+      }
+    };
+
+    watch(
+      () => props.contactInfo,
+      (value) => {
+        Object.assign(contact, DEFAULT_CONTACT, value);
+      }
+    );
+
+    return () => (
+      <Form class={bem()} onSubmit={onSave}>
+        <div class={bem('fields')}>
+          <Field
+            v-model={contact.name}
+            clearable
+            label={t('name')}
+            rules={[{ required: true, message: t('nameInvalid') }]}
+            maxlength="30"
+            placeholder={t('nameEmpty')}
+          />
+          <Field
+            v-model={contact.tel}
+            clearable
+            type="tel"
+            label={t('tel')}
+            rules={[
+              { validator: props.telValidator, message: t('telInvalid') },
+            ]}
+            placeholder={t('telEmpty')}
+          />
+        </div>
+        {renderSetDefault()}
+        {renderButtons()}
+      </Form>
     );
   },
 });

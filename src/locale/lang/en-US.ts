@@ -16,9 +16,13 @@ export default {
     end: 'End',
     start: 'Start',
     title: 'Calendar',
+    startEnd: 'Start/End',
     weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     monthTitle: (year: number, month: number) => `${year}/${month}`,
     rangePrompt: (maxRange: number) => `Choose no more than ${maxRange} days`,
+  },
+  vanCascader: {
+    select: 'Select',
   },
   vanContactCard: {
     addText: 'Add contact info',

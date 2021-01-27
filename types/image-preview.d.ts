@@ -1,4 +1,6 @@
-import { VanPopupMixin } from './mixins/popup';
+import { TeleportProps } from 'vue';
+import { VanComponent } from './component';
+import { SwipeToOptions } from './swipe';
 
 export type ImagePreviewOptions =
   | string[]
@@ -7,19 +9,23 @@ export type ImagePreviewOptions =
       images: string[];
       maxZoom?: number;
       minZoom?: number;
+      teleport?: TeleportProps['to'];
       className?: any;
-      lazyLoad?: boolean;
       showIndex?: boolean;
-      asyncClose?: boolean;
+      closeable?: boolean;
+      closeIcon?: string;
+      beforeClose?: (active: number) => boolean | Promise<boolean>;
       swipeDuration?: number;
       startPosition?: number;
       showIndicators?: boolean;
       closeOnPopstate?: boolean;
-      onClose?: () => void;
-      onChange?: (index: number) => void;
+      closeIconPosition?: string;
+      onClose?(): void;
+      onChange?(index: number): void;
+      swipeTo?(index: number, options?: SwipeToOptions): void;
     };
 
-export class VanImagePreview extends VanPopupMixin {
+export class VanImagePreview {
   images: string[];
 
   showIndex: boolean;
@@ -30,6 +36,7 @@ export class VanImagePreview extends VanPopupMixin {
 export interface ImagePreview {
   (options: ImagePreviewOptions, startPosition?: number): VanImagePreview;
   install(): void;
+  Component: typeof VanComponent;
 }
 
 export const ImagePreview: ImagePreview;

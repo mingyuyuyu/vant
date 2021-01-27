@@ -1,95 +1,108 @@
+import { ref, CSSProperties } from 'vue';
+
 // Utils
-import { createNamespace, noop } from '../utils';
-import { inherit } from '../utils/functional';
+import { createNamespace } from '../utils';
 import { BORDER_BOTTOM } from '../utils/constant';
+
+// Composition
+import { usePlaceholder } from '../composables/use-placeholder';
 
 // Components
 import Icon from '../icon';
 
-// Types
-import { CreateElement, RenderContext } from 'vue/types';
-import { ScopedSlot, DefaultSlots } from '../utils/types';
-
-export type NavBarProps = {
-  title?: string;
-  fixed?: boolean;
-  zIndex: number;
-  border: boolean;
-  leftText?: string;
-  rightText?: string;
-  leftArrow?: boolean;
-};
-
-export type NavBarSlots = DefaultSlots & {
-  left?: ScopedSlot;
-  title?: ScopedSlot;
-  right?: ScopedSlot;
-};
-
-export type NavBarEvents = {
-  'click-left'?(event: Event): void;
-  'click-right'?(event: Event): void;
-};
-
 const [createComponent, bem] = createNamespace('nav-bar');
 
-function NavBar(
-  h: CreateElement,
-  props: NavBarProps,
-  slots: NavBarSlots,
-  ctx: RenderContext<NavBarProps>
-) {
-  function LeftPart() {
-    if (slots.left) {
-      return slots.left();
-    }
-
-    return [
-      props.leftArrow && <Icon class={bem('arrow')} name="arrow-left" />,
-      props.leftText && <span class={bem('text')}>{props.leftText}</span>,
-    ];
-  }
-
-  function RightPart() {
-    if (slots.right) {
-      return slots.right();
-    }
-
-    if (props.rightText) {
-      return <span class={bem('text')}>{props.rightText}</span>;
-    }
-  }
-
-  return (
-    <div
-      style={{ zIndex: props.zIndex }}
-      class={[bem({ fixed: props.fixed }), { [BORDER_BOTTOM]: props.border }]}
-      {...inherit(ctx)}
-    >
-      <div class={bem('left')} onClick={ctx.listeners['click-left'] || noop}>
-        {LeftPart()}
-      </div>
-      <div class={[bem('title'), 'van-ellipsis']}>
-        {slots.title ? slots.title() : props.title}
-      </div>
-      <div class={bem('right')} onClick={ctx.listeners['click-right'] || noop}>
-        {RightPart()}
-      </div>
-    </div>
-  );
-}
-
-NavBar.props = {
-  title: String,
-  fixed: Boolean,
-  zIndex: [Number, String],
-  leftText: String,
-  rightText: String,
-  leftArrow: Boolean,
-  border: {
-    type: Boolean,
-    default: true,
+export default createComponent({
+  props: {
+    title: String,
+    fixed: Boolean,
+    zIndex: [Number, String],
+    leftText: String,
+    rightText: String,
+    leftArrow: Boolean,
+    placeholder: Boolean,
+    safeAreaInsetTop: Boolean,
+    border: {
+      type: Boolean,
+      default: true,
+    },
   },
-};
 
-export default createComponent<NavBarProps, NavBarEvents>(NavBar);
+  emits: ['click-left', 'click-right'],
+
+  setup(props, { emit, slots }) {
+    const navBarRef = ref();
+    const renderPlaceholder = usePlaceholder(navBarRef, bem);
+
+    const onClickLeft = (event: MouseEvent) => {
+      emit('click-left', event);
+    };
+
+    const onClickRight = (event: MouseEvent) => {
+      emit('click-right', event);
+    };
+
+    const renderLeft = () => {
+      if (slots.left) {
+        return slots.left();
+      }
+
+      return [
+        props.leftArrow && <Icon class={bem('arrow')} name="arrow-left" />,
+        props.leftText && <span class={bem('text')}>{props.leftText}</span>,
+      ];
+    };
+
+    const renderRight = () => {
+      if (slots.right) {
+        return slots.right();
+      }
+
+      return <span class={bem('text')}>{props.rightText}</span>;
+    };
+
+    const renderNavBar = () => {
+      const { title, fixed, border, zIndex } = props;
+      const style: CSSProperties = {
+        zIndex: zIndex !== undefined ? +zIndex : undefined,
+      };
+
+      const hasLeft = props.leftArrow || props.leftText || slots.left;
+      const hasRight = props.rightText || slots.right;
+
+      return (
+        <div
+          ref={navBarRef}
+          style={style}
+          class={[
+            bem({ fixed, 'safe-area-inset-top': props.safeAreaInsetTop }),
+            { [BORDER_BOTTOM]: border },
+          ]}
+        >
+          <div class={bem('content')}>
+            {hasLeft && (
+              <div class={bem('left')} onClick={onClickLeft}>
+                {renderLeft()}
+              </div>
+            )}
+            <div class={[bem('title'), 'van-ellipsis']}>
+              {slots.title ? slots.title() : title}
+            </div>
+            {hasRight && (
+              <div class={bem('right')} onClick={onClickRight}>
+                {renderRight()}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    return () => {
+      if (props.fixed && props.placeholder) {
+        return renderPlaceholder(renderNavBar);
+      }
+      return renderNavBar();
+    };
+  },
+});

@@ -1,58 +1,43 @@
-// Utils
 import { createNamespace } from '../utils';
-import { inherit } from '../utils/functional';
 import { BORDER_TOP_BOTTOM } from '../utils/constant';
-
-// Types
-import { CreateElement, RenderContext } from 'vue/types';
-import { DefaultSlots, ScopedSlot } from '../utils/types';
-
-export type CellGroupProps = {
-  title?: string;
-  border: boolean;
-};
-
-export type CellGroupSlots = DefaultSlots & {
-  title?: ScopedSlot;
-};
 
 const [createComponent, bem] = createNamespace('cell-group');
 
-function CellGroup(
-  h: CreateElement,
-  props: CellGroupProps,
-  slots: CellGroupSlots,
-  ctx: RenderContext<CellGroupProps>
-) {
-  const Group = (
-    <div
-      class={[bem(), { [BORDER_TOP_BOTTOM]: props.border }]}
-      {...inherit(ctx, true)}
-    >
-      {slots.default?.()}
-    </div>
-  );
+export default createComponent({
+  inheritAttrs: false,
 
-  if (props.title || slots.title) {
-    return (
-      <div>
-        <div class={bem('title')}>
-          {slots.title ? slots.title() : props.title}
-        </div>
-        {Group}
+  props: {
+    title: String,
+    border: {
+      type: Boolean,
+      default: true,
+    },
+  },
+
+  setup(props, { slots, attrs }) {
+    const renderGroup = () => (
+      <div class={[bem(), { [BORDER_TOP_BOTTOM]: props.border }]} {...attrs}>
+        {slots.default?.()}
       </div>
     );
-  }
 
-  return Group;
-}
+    const renderTitle = () => (
+      <div class={bem('title')}>
+        {slots.title ? slots.title() : props.title}
+      </div>
+    );
 
-CellGroup.props = {
-  title: String,
-  border: {
-    type: Boolean,
-    default: true,
+    return () => {
+      if (props.title || slots.title) {
+        return (
+          <>
+            {renderTitle()}
+            {renderGroup()}
+          </>
+        );
+      }
+
+      return renderGroup();
+    };
   },
-};
-
-export default createComponent<CellGroupProps>(CellGroup);
+});

@@ -1,28 +1,38 @@
-import { raf, cancelRaf } from '../utils/dom/raf';
-import { getRootScrollTop, setRootScrollTop } from '../utils/dom/scroll';
+import { raf, cancelRaf } from '@vant/use';
+import { getScrollTop, setScrollTop } from '../utils';
 
-let scrollLeftRafId: number;
+let rafId: number;
 
-export function scrollLeftTo(el: HTMLElement, to: number, duration: number) {
-  cancelRaf(scrollLeftRafId);
+export function scrollLeftTo(
+  scroller: HTMLElement,
+  to: number,
+  duration: number
+) {
+  cancelRaf(rafId);
 
   let count = 0;
-  const from = el.scrollLeft;
+  const from = scroller.scrollLeft;
   const frames = duration === 0 ? 1 : Math.round((duration * 1000) / 16);
 
   function animate() {
-    el.scrollLeft += (to - from) / frames;
+    scroller.scrollLeft += (to - from) / frames;
 
     if (++count < frames) {
-      scrollLeftRafId = raf(animate);
+      rafId = raf(animate);
     }
   }
 
   animate();
 }
 
-export function scrollTopTo(to: number, duration: number, cb: Function) {
-  let current = getRootScrollTop();
+export function scrollTopTo(
+  scroller: HTMLElement,
+  to: number,
+  duration: number,
+  callback: () => void
+) {
+  let current = getScrollTop(scroller);
+
   const isDown = current < to;
   const frames = duration === 0 ? 1 : Math.round((duration * 1000) / 16);
   const step = (to - current) / frames;
@@ -34,12 +44,12 @@ export function scrollTopTo(to: number, duration: number, cb: Function) {
       current = to;
     }
 
-    setRootScrollTop(current);
+    setScrollTop(scroller, current);
 
     if ((isDown && current < to) || (!isDown && current > to)) {
       raf(animate);
-    } else {
-      cb && cb();
+    } else if (callback) {
+      raf(callback as FrameRequestCallback);
     }
   }
 

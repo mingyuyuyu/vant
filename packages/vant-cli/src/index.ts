@@ -17,13 +17,11 @@ import { commitLint } from './commands/commit-lint';
 
 version(`@vant/cli ${packageJson.version}`);
 
-command('dev')
-  .description('Run webpack dev server')
-  .action(dev);
+process.env.VANT_CLI_VERSION = packageJson.version;
 
-command('lint')
-  .description('Run eslint and stylelint')
-  .action(lint);
+command('dev').description('Run webpack dev server').action(dev);
+
+command('lint').description('Run eslint and stylelint').action(lint);
 
 command('test')
   .description('Run unit tests through jest')
@@ -37,9 +35,7 @@ command('test')
   )
   .action(test);
 
-command('clean')
-  .description('Clean all dist files')
-  .action(clean);
+command('clean').description('Clean all dist files').action(clean);
 
 command('build')
   .description('Compile components in production mode')
@@ -48,18 +44,15 @@ command('build')
 
 command('release')
   .description('Compile components and release it')
+  .option('--tag <tag>', 'Release tag')
   .action(release);
 
 command('build-site')
   .description('Compile site in production mode')
   .action(buildSite);
 
-command('changelog')
-  .description('Generate changelog')
-  .action(changelog);
+command('changelog').description('Generate changelog').action(changelog);
 
-command('commit-lint')
-  .description('Lint commit message')
-  .action(commitLint);
+command('commit-lint').description('Lint commit message').action(commitLint);
 
-parse(process.argv);
+parse();

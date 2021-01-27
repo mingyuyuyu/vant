@@ -1,64 +1,52 @@
-import { mount } from '../../../test';
+import { mount } from '@vue/test-utils';
 import AddressList from '..';
 
 const list = [
   {
     id: '1',
-    name: '张三',
+    name: 'Name 1',
     tel: '13000000000',
-    address: '浙江省杭州市西湖区文三路 138 号东方通信大厦 7 楼 501 室',
+    address: 'Address 1',
   },
   {
     id: '2',
-    name: '李四',
+    name: 'Name 2',
     tel: '1310000000',
-    address: '浙江省杭州市拱墅区莫干山路 50 号',
+    address: 'Address 2',
   },
 ];
 
-test('unswitchable', () => {
+test('should not render Radio when switchable is false', async () => {
   const wrapper = mount(AddressList, {
-    propsData: {
+    props: {
       list,
       switchable: false,
     },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.find('.van-radio').exists()).toBeFalsy();
 });
 
-test('select event', () => {
-  const onSelect = jest.fn();
+test('should emit select event after clicking radio icon', () => {
   const wrapper = mount(AddressList, {
-    propsData: {
+    props: {
       list,
-    },
-    context: {
-      on: {
-        select: onSelect,
-      },
     },
   });
 
   wrapper.find('.van-radio__icon').trigger('click');
 
-  expect(onSelect).toHaveBeenCalledTimes(1);
+  expect(wrapper.emitted('select')[0]).toEqual([list[0], 0]);
 });
 
-test('click-item event', () => {
-  const onClickItem = jest.fn();
+test('should emit click-item event when item is clicked', () => {
   const wrapper = mount(AddressList, {
-    propsData: {
+    props: {
       list,
-    },
-    context: {
-      on: {
-        'click-item': onClickItem,
-      },
     },
   });
 
   wrapper.find('.van-address-item').trigger('click');
 
-  expect(onClickItem).toHaveBeenCalledTimes(1);
+  expect(wrapper.emitted('click-item')[0]).toEqual([list[0], 0]);
 });

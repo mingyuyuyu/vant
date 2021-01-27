@@ -6,38 +6,49 @@ const [createComponent] = createNamespace('calendar-header');
 export default createComponent({
   props: {
     title: String,
-    monthTitle: String,
+    subtitle: String,
+    showTitle: Boolean,
+    showSubtitle: Boolean,
+    firstDayOfWeek: Number,
   },
 
-  methods: {
-    genTitle() {
-      const title = this.slots('title') || this.title || t('title');
-      return <div class={bem('header-title')}>{title}</div>;
-    },
+  setup(props, { slots }) {
+    const renderTitle = () => {
+      if (props.showTitle) {
+        const text = props.title || t('title');
+        const title = slots.title ? slots.title() : text;
+        return <div class={bem('header-title')}>{title}</div>;
+      }
+    };
 
-    genMonth() {
-      return <div class={bem('month-title')}>{this.monthTitle}</div>;
-    },
+    const renderSubtitle = () => {
+      if (props.showSubtitle) {
+        return <div class={bem('header-subtitle')}>{props.subtitle}</div>;
+      }
+    };
 
-    genWeekDays() {
+    const renderWeekDays = () => {
+      const { firstDayOfWeek } = props;
       const weekdays = t('weekdays');
+      const renderWeekDays = [
+        ...weekdays.slice(firstDayOfWeek, 7),
+        ...weekdays.slice(0, firstDayOfWeek),
+      ];
 
       return (
         <div class={bem('weekdays')}>
-          {weekdays.map(item => (
-            <span class={bem('weekday')}>{item}</span>
+          {renderWeekDays.map((text) => (
+            <span class={bem('weekday')}>{text}</span>
           ))}
         </div>
       );
-    },
-  },
+    };
 
-  render() {
-    return (
+    return () => (
       <div class={bem('header')}>
-        {this.genTitle()}
-        {this.genMonth()}
-        {this.genWeekDays()}
+        {renderTitle()}
+        {renderSubtitle()}
+        {renderWeekDays()}
       </div>
     );
   },

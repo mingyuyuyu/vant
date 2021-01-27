@@ -1,15 +1,9 @@
+import { ref } from 'vue';
 import Collapse from '..';
 import CollapseItem from '../../collapse-item';
 import { later, mount } from '../../../test';
 
-const component = {
-  template: `
-  <van-collapse v-model="active" :accordion="accordion" :border="border">
-    <van-collapse-item title="a" name="first">content</van-collapse-item>
-    <van-collapse-item title="b">content</van-collapse-item>
-    <van-collapse-item title="c">content</van-collapse-item>
-  </van-collapse>
-  `,
+const Component = {
   props: {
     accordion: Boolean,
     border: {
@@ -22,125 +16,193 @@ const component = {
       active: this.accordion ? '' : [],
     };
   },
+  render() {
+    return (
+      <Collapse
+        v-model={this.active}
+        border={this.border}
+        accordion={this.accordion}
+      >
+        <CollapseItem title="a" name="first">
+          content
+        </CollapseItem>
+        <CollapseItem title="b">content</CollapseItem>
+        <CollapseItem title="c">content</CollapseItem>
+      </Collapse>
+    );
+  },
 };
 
-test('basic mode', async () => {
-  const wrapper = mount(component);
+test('should update active value when title is clicked', async () => {
+  const wrapper = mount(Component);
 
   const titles = wrapper.findAll('.van-collapse-item__title');
-  titles.at(0).trigger('click');
+  titles[0].trigger('click');
   expect(wrapper.vm.active).toEqual(['first']);
 
   await later();
-  titles.at(1).trigger('click');
+  titles[1].trigger('click');
   expect(wrapper.vm.active).toEqual(['first', 1]);
 
   await later();
-  titles.at(0).trigger('click');
+  titles[0].trigger('click');
   expect(wrapper.vm.active).toEqual([1]);
 
-  wrapper.destroy();
+  wrapper.unmount();
 });
 
-test('accordion', async () => {
-  const wrapper = mount(component, {
-    propsData: {
+test('should update active value when title is clicked in accordion mode', async () => {
+  const wrapper = mount(Component, {
+    props: {
       accordion: true,
     },
   });
 
   const titles = wrapper.findAll('.van-collapse-item__title');
-  titles.at(0).trigger('click');
+  titles[0].trigger('click');
   expect(wrapper.vm.active).toEqual('first');
 
-  titles.at(1).trigger('click');
+  titles[1].trigger('click');
   expect(wrapper.vm.active).toEqual(1);
 
-  await later();
-  titles.at(0).trigger('click');
+  titles[0].trigger('click');
   expect(wrapper.vm.active).toEqual('first');
 
-  titles.at(0).trigger('click');
+  await later();
+  titles[0].trigger('click');
   expect(wrapper.vm.active).toEqual('');
 });
 
-test('render collapse-item slot', () => {
+test('should render slots of CollapseItem correctly', () => {
   const wrapper = mount({
-    template: `
-      <van-collapse v-model="active">
-        <van-collapse-item>
-          <template v-slot:title>this is title</template>
-          <template v-slot:value>this is value</template>
-          <template v-slot:icon>this is icon</template>
-          <template v-slot:right-icon>this is right icon</template>
-        </van-collapse-item>
-      </van-collapse>
-      `,
     data() {
       return {
         active: [],
       };
     },
+    render() {
+      return (
+        <Collapse v-model={this.active}>
+          <CollapseItem
+            v-slots={{
+              title: () => 'this is title',
+              value: () => 'this is value',
+              icon: () => 'this is icon',
+              'right-icon': () => 'this is right icon',
+            }}
+          />
+        </Collapse>
+      );
+    },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.html()).toMatchSnapshot();
 });
 
-test('disable border', () => {
-  const wrapper = mount(component, {
-    propsData: {
+test('should not render border when border prop is false', () => {
+  const wrapper = mount(Component, {
+    props: {
       border: false,
     },
   });
 
-  expect(wrapper).toMatchSnapshot();
+  expect(wrapper.find('.van-hairline--top-bottom').exists()).toBeFalsy();
 });
 
-test('lazy render collapse content', async () => {
+test('should lazy render collapse content', async () => {
   const wrapper = mount({
-    template: `
-      <collapse v-model="active">
-        <collapse-item title="a" name="first" style="padding: 0;">content</collapse-item>
-        <collapse-item title="b" style="padding: 0;">{{ content }}</collapse-item>
-      </collapse>
-    `,
-    components: {
-      Collapse,
-      CollapseItem,
-    },
     data() {
       return {
-        content: '',
         active: [],
       };
     },
-  });
-
-  const titles = wrapper.findAll('.van-collapse-item__title');
-
-  titles.at(1).trigger('click');
-  wrapper.vm.content = 'content';
-  expect(wrapper).toMatchSnapshot();
-});
-
-test('warn when value type is incorrect', () => {
-  const originConsoleError = console.error;
-  const error = jest.fn();
-  console.error = error;
-
-  mount({
-    template: `
-    <van-collapse v-model="active">
-      <van-collapse-item title="a" name="first"></van-collapse-item>
-    </van-collapse>
-    `,
-    data() {
-      return {
-        active: 0,
-      };
+    render() {
+      return (
+        <Collapse v-model={this.active}>
+          <CollapseItem title="a">content</CollapseItem>
+          <CollapseItem title="b">
+            <div class="foo" />
+          </CollapseItem>
+        </Collapse>
+      );
     },
   });
 
-  expect(error).toHaveBeenCalledTimes(1);
-  console.error = originConsoleError;
+  expect(wrapper.find('.foo').exists()).toBeFalsy();
+
+  const titles = wrapper.findAll('.van-collapse-item__title');
+  await titles[1].trigger('click');
+  expect(wrapper.find('.foo').exists()).toBeTruthy();
+});
+
+test('should toggle collapse after calling the toggle method', async () => {
+  const wrapper = mount({
+    setup() {
+      const itemA = ref();
+      const itemB = ref();
+      const active = ref([]);
+      return {
+        itemA,
+        itemB,
+        active,
+      };
+    },
+    render() {
+      return (
+        <Collapse v-model={this.active}>
+          <CollapseItem name="a" ref="itemA" />
+          <CollapseItem name="b" ref="itemB" />
+        </Collapse>
+      );
+    },
+  });
+
+  wrapper.vm.itemA.toggle();
+  expect(wrapper.vm.active).toEqual(['a']);
+
+  await later();
+  wrapper.vm.itemB.toggle();
+  expect(wrapper.vm.active).toEqual(['a', 'b']);
+
+  wrapper.vm.itemB.toggle(false);
+  expect(wrapper.vm.active).toEqual(['a']);
+
+  wrapper.vm.itemA.toggle();
+  expect(wrapper.vm.active).toEqual([]);
+});
+
+test('should toggle collapse after calling the toggle method in accordion mode', async () => {
+  const wrapper = mount({
+    setup() {
+      const itemA = ref();
+      const itemB = ref();
+      const active = ref([]);
+      return {
+        itemA,
+        itemB,
+        active,
+      };
+    },
+    render() {
+      return (
+        <Collapse v-model={this.active} accordion>
+          <CollapseItem name="a" ref="itemA" />
+          <CollapseItem name="b" ref="itemB" />
+        </Collapse>
+      );
+    },
+  });
+
+  wrapper.vm.itemA.toggle();
+  expect(wrapper.vm.active).toEqual('a');
+
+  wrapper.vm.itemB.toggle();
+  expect(wrapper.vm.active).toEqual('b');
+
+  await later();
+  wrapper.vm.itemB.toggle(false);
+  expect(wrapper.vm.active).toEqual('');
+
+  wrapper.vm.itemA.toggle();
+  expect(wrapper.vm.active).toEqual('a');
 });
